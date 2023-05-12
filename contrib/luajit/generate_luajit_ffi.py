@@ -46,21 +46,19 @@ class Allegro:
                 else:
                     self.typesfw.append(proto)
             elif proto.startswith("enum") or\
-                proto.startswith("typedef enum"):
+                    proto.startswith("typedef enum"):
                 if name:
-                    self.enums.append('enum %s;' % name)
+                    self.enums.append(f'enum {name};')
                 deferred.append(("", proto))
             elif proto.startswith("#define"):
                 if not name.startswith("_") and not name.startswith("GL_"):
                     i = eval(proto.split(None, 2)[2])
                     self.constants[name] = i
+            elif mob := re.match(f"typedef (.*) {name}", proto):
+                self.typesfw.append(proto)
             else:
-                mob = re.match("typedef (.*) " + name, proto)
-                if mob:
-                    self.typesfw.append(proto)
-                else:
-                    # Probably a function pointer
-                    self.typesfuncptr.append(proto)
+                # Probably a function pointer
+                self.typesfuncptr.append(proto)
 
         # Second pass of prototypes now we have seen them all.
         for name, proto in deferred:
@@ -72,7 +70,7 @@ class Allegro:
 
             # Calculate enums
             if proto.startswith("enum") or \
-                proto.startswith("typedef enum"):
+                    proto.startswith("typedef enum"):
 
                 fields = braces.split(",")
                 i = 0
@@ -88,9 +86,7 @@ class Allegro:
                         except NameError:
                             i = val
                         except Exception:
-                            raise ValueError(
-                                "Exception while parsing '{}'".format(
-                                    val))
+                            raise ValueError(f"Exception while parsing '{val}'")
                     else:
                         fname = field.strip()
                     if not fname:
@@ -140,12 +136,12 @@ def typeorder(decls, declared):
             ok = True
             # print aldeps
             for rdep in aldeps:
-                dep = retname.match(rdep).group(1)
+                dep = retname.match(rdep)[1]
                 if dep.startswith('ALLEGRO_GL_'):
                     continue    # ignore
                 if dep in decl and rdep[-1] == '*':
                     continue    # ok, seen type and ptr
-                if not dep in seen:
+                if dep not in seen:
                     ok = False
                     break
             if ok:
@@ -224,7 +220,7 @@ enum { ALLEGRO_KEY_MAX = 227 };
     f.write('\n// ENUMS\n')
     reenum = re.compile('enum (\w+)')
     for e in al.enums:
-        ename = reenum.match(e).group(1)
+        ename = reenum.match(e)[1]
         f.write('typedef enum %s %s;\n' % (ename, ename))
 
     # types

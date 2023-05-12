@@ -24,28 +24,17 @@ def make_drawer(name):
    white = "_white" in name
    repeat = "_repeat" in name
 
-   if grad and solid:
-      raise Exception("grad and solid")
-   if grad and white:
-      raise Exception("grad and white")
+   if grad:
+      if solid:
+         raise Exception("grad and solid")
+      if white:
+         raise Exception("grad and white")
    if shade and opaque:
       raise Exception("shade and opaque")
 
    print(interp("static void #{name} (uintptr_t state, int x1, int y, int x2) {"))
 
-   if not texture:
-      if grad:
-         print("""\
-         state_grad_any_2d *gs = (state_grad_any_2d *)state;
-         state_solid_any_2d *s = &gs->solid;
-         ALLEGRO_COLOR cur_color = s->cur_color;
-         """)
-      else:
-         print("""\
-         state_solid_any_2d *s = (state_solid_any_2d *)state;
-         ALLEGRO_COLOR cur_color = s->cur_color;
-         """)
-   else:
+   if texture:
       if grad:
          print("""\
          state_texture_grad_any_2d *gs = (state_texture_grad_any_2d *)state;
@@ -61,6 +50,17 @@ def make_drawer(name):
          float v = s->v;
          """)
 
+   elif grad:
+      print("""\
+         state_grad_any_2d *gs = (state_grad_any_2d *)state;
+         state_solid_any_2d *s = &gs->solid;
+         ALLEGRO_COLOR cur_color = s->cur_color;
+         """)
+   else:
+      print("""\
+         state_solid_any_2d *s = (state_solid_any_2d *)state;
+         ALLEGRO_COLOR cur_color = s->cur_color;
+         """)
    # XXX still don't understand why y-1 is required
    print("""\
       ALLEGRO_BITMAP *target = s->target;
@@ -194,13 +194,11 @@ def make_drawer(name):
       make_loop(copy_format=True, src_size='3')
       print("else")
       make_loop(copy_format=True, src_size='2')
-      print("else")
    else:
       make_loop(
             if_format='ALLEGRO_PIXEL_FORMAT_ARGB_8888'
             )
-      print("else")
-
+   print("else")
    make_loop()
 
    print("""\
@@ -366,7 +364,6 @@ def make_innermost_loop(
    print("{")
 
    if texture:
-      # In non-tiling mode we can hoist offsets out of the loop.
       if tiling:
          print("""\
             al_fixed uu = al_ftofix(u);
@@ -436,9 +433,7 @@ def make_innermost_loop(
                + src_x * #{src_size};
          """))
 
-      if copy_format:
-         pass
-      else:
+      if not copy_format:
          print(interp("""\
             ALLEGRO_COLOR src_color;
             _AL_INLINE_GET_PIXEL(#{src_format}, src_data, src_color, false);
@@ -473,9 +468,7 @@ def make_innermost_loop(
          }
          """))
    elif shade:
-      blend = "_al_blend_inline"
-      if alpha_only:
-         blend = "_al_blend_alpha_inline"
+      blend = "_al_blend_alpha_inline" if alpha_only else "_al_blend_inline"
       print(interp("""\
          {
             ALLEGRO_COLOR dst_color;

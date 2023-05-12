@@ -117,7 +117,7 @@ def make_point_interpolator(name, fmt):
    }"""))
 
 def make_linear_interpolator(name, fmt):
-   assert fmt == "f32" or fmt == "s16"
+   assert fmt in ["f32", "s16"]
 
    print(interp("""\
    static INLINE const void *

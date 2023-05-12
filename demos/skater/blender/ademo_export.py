@@ -113,39 +113,31 @@ def message(str):
     raise MessageException
 
 def transform(matrix, vector):
-    """
+	"""
     Given a matrix and a vector, return the result of transforming the vector by
     the matrix.
     matrix = [[0, 0, 0, 0], [0, 0, 0, 0]]
     vector = [0, 0, 0, 0]
     return = [0, 0]
     """
-    vout = []
-    for j in range(2):
-        x = 0
-        for i in range(4):
-            x += matrix[i][j] * vector[i]
-        vout += [x]
-    return vout
+	return [sum(matrix[i][j] * vector[i] for i in range(4)) for j in range(2)]
 
 
 def direction(tri):
-    """
+	"""
     Given a triangle, determine if it is counterclockwise or not.
     tri = [i, i, i],
     where i is a global vertex index.
     """
-    v1 = (V[tri[1]][0] - V[tri[0]][0], V[tri[1]][1] - V[tri[0]][1])
-    v2 = (V[tri[2]][0] - V[tri[1]][0], V[tri[2]][1] - V[tri[1]][1])
-    v = v1[0] * v2[1] - v1[1] * v2[0]
-    return v
+	v1 = (V[tri[1]][0] - V[tri[0]][0], V[tri[1]][1] - V[tri[0]][1])
+	v2 = (V[tri[2]][0] - V[tri[1]][0], V[tri[2]][1] - V[tri[1]][1])
+	return v1[0] * v2[1] - v1[1] * v2[0]
 
 def upper(i1, i2):
-    """
+	"""
     Given two vertex ids, determine if the edge is an upper face.
     """
-    v = V[i2][0] - V[i1][0]
-    return v
+	return V[i2][0] - V[i1][0]
 
 def get_prop(ob, name, val):
     try:

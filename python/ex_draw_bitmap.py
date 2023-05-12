@@ -28,30 +28,33 @@ text = [
    "F1 - toggle help text"
     ]
 
+
+
 class Example:
-   sprites = [Sprite() for i in range(MAX_SPRITES)]
-   use_memory_bitmaps = False
-   blending = False
-   display = None
-   mysha = None
-   bitmap = None
-   bitmap_size = 0
-   sprite_count = 0
-   show_help = True
-   font = None
-    
-   mouse_down = False
-   last_x, last_y = 0, 0
+    sprites = [Sprite() for _ in range(MAX_SPRITES)]
+    use_memory_bitmaps = False
+    blending = False
+    display = None
+    mysha = None
+    bitmap = None
+    bitmap_size = 0
+    sprite_count = 0
+    show_help = True
+    font = None
 
-   white = None
-   half_white = None
-   dark = None
-   red = None
-   
-   direct_speed_measure = 1.0
+    mouse_down = False
+    last_x, last_y = 0, 0
 
-   ftpos = 0
-   frame_times = [0.0] * FPS
+    white = None
+    half_white = None
+    dark = None
+    red = None
+
+    direct_speed_measure = 1.0
+
+    ftpos = 0
+    frame_times = [0.0] * FPS
+
 
 example = Example()
 
@@ -95,34 +98,30 @@ def add_sprite():
         s.dy = sin(a) * FPS * 2
 
 def add_sprites(n):
-    for i in range(n):
+    for _ in range(n):
         add_sprite()
 
 def remove_sprites(n):
     example.sprite_count -= n
-    if example.sprite_count < 0:
-        example.sprite_count = 0
+    example.sprite_count = max(example.sprite_count, 0)
 
 def change_size(size):
-   if size < 1:
-      size = 1
-   if size > 1024:
-      size = 1024
-
-   if example.bitmap:
-      al_destroy_bitmap(example.bitmap)
-   al_set_new_bitmap_flags(
-      ALLEGRO_MEMORY_BITMAP if example.use_memory_bitmaps else 0)
-   example.bitmap = al_create_bitmap(size, size)
-   example.bitmap_size = size
-   al_set_target_bitmap(example.bitmap)
-   al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO, example.white)
-   al_clear_to_color(al_map_rgba_f(0, 0, 0, 0))
-   bw = al_get_bitmap_width(example.mysha)
-   bh = al_get_bitmap_height(example.mysha)
-   al_draw_scaled_bitmap(example.mysha, 0, 0, bw, bh, 0, 0,
-      size, size, 0)
-   al_set_target_backbuffer(example.display)
+    size = max(size, 1)
+    size = min(size, 1024)
+    if example.bitmap:
+       al_destroy_bitmap(example.bitmap)
+    al_set_new_bitmap_flags(
+       ALLEGRO_MEMORY_BITMAP if example.use_memory_bitmaps else 0)
+    example.bitmap = al_create_bitmap(size, size)
+    example.bitmap_size = size
+    al_set_target_bitmap(example.bitmap)
+    al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO, example.white)
+    al_clear_to_color(al_map_rgba_f(0, 0, 0, 0))
+    bw = al_get_bitmap_width(example.mysha)
+    bh = al_get_bitmap_height(example.mysha)
+    al_draw_scaled_bitmap(example.mysha, 0, 0, bw, bh, 0, 0,
+       size, size, 0)
+    al_set_target_backbuffer(example.display)
 
 def sprite_update(s):
    w = al_get_display_width(example.display)
@@ -215,7 +214,7 @@ def main():
     al_init_font_addon()
 
     al_get_num_video_adapters()
-   
+
     info = ALLEGRO_MONITOR_INFO()
     al_get_monitor_info(0, byref(info))
     if info.x2 - info.x1 < w:
@@ -229,15 +228,15 @@ def main():
 
     if not al_install_keyboard():
         abort_example("Error installing keyboard.\n")
-    
+
     if not al_install_mouse():
         abort_example("Error installing mouse.\n")
 
-    example.font = al_load_font(p + "/data/fixed_font.tga", 0, 0)
+    example.font = al_load_font(f"{p}/data/fixed_font.tga", 0, 0)
     if not example.font:
         abort_example("Error loading data/fixed_font.tga\n")
 
-    example.mysha = al_load_bitmap(p + "/data/mysha256x256.png")
+    example.mysha = al_load_bitmap(f"{p}/data/mysha256x256.png")
     if not example.mysha:
         abort_example("Error loading data/mysha256x256.png\n")
 
@@ -318,7 +317,7 @@ def main():
                     example.blending += 1
                     if example.blending == 4:
                         example.blending = 0
-                if button == 4:
+                elif button == 4:
                     example.show_help ^= 1
 
         elif event.type == ALLEGRO_EVENT_MOUSE_AXES:
@@ -336,7 +335,7 @@ def main():
 
                 if dx < -4:
                     change_size(example.bitmap_size + dx + 4)
-                
+
                 example.last_x = event.mouse.x
                 example.last_y = event.mouse.y
 

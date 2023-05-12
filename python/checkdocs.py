@@ -24,9 +24,8 @@ def check_references():
 
     html_refs = os.path.join(options.build, "docs", "html_refs")
     for line in open(html_refs):
-        mob = re.match(r"\[(.*?)\]", line)
-        if mob:
-            links[mob.group(1)] = True
+        if mob := re.match(r"\[(.*?)\]", line):
+            links[mob[1]] = True
 
     docs = glob.glob("docs/src/refman/*.txt")
     for doc in docs:
@@ -34,8 +33,8 @@ def check_references():
         text = re.compile("<script.*?>.*?</script>", re.S).sub("", text)
         # in case of [A][B], we will not see A but we do see B.
         for link in re.findall(r" \[([^[]*?)\][^([]", text):
-            if not link in links:
-                print("Missing: %s: %s" % (doc, link))
+            if link not in links:
+                print(f"Missing: {doc}: {link}")
         for section in re.findall(r"^#+ (.*)", text, re.MULTILINE):
            if not section.startswith("API:"):
               sections[section] = 1
@@ -44,26 +43,25 @@ def check_references():
         del links[link]
 
 def add_struct(line):
-    if options.protos:
-        kind = re.match("\s*(\w+)", line).group(1)
-        if kind in ["typedef", "struct", "enum", "union"]:
-            mob = None
-            if kind != "typedef":
-                mob = re.match(kind + "\s+(\w+)", line)
-            if not mob:
-                mob = re.match(".*?(\w+);$", line)
-            if not mob and kind == "typedef":
-                mob = re.match("typedef.*?\(\s*\*\s*(\w+)\)", line)
-            if not mob:
-                anonymous_enums[line] = 1
+    if not options.protos:
+        return
+    kind = re.match("\s*(\w+)", line)[1]
+    if kind in ["typedef", "struct", "enum", "union"]:
+        mob = re.match(kind + "\s+(\w+)", line) if kind != "typedef" else None
+        if not mob:
+            mob = re.match(".*?(\w+);$", line)
+        if not mob and kind == "typedef":
+            mob = re.match("typedef.*?\(\s*\*\s*(\w+)\)", line)
+        if not mob:
+            anonymous_enums[line] = 1
+        else:
+            sname = mob.group(1)
+            if sname.startswith("_ALLEGRO_gl"):
+                return
+            if kind == "typedef":
+                types[sname] = line
             else:
-                sname = mob.group(1)
-                if sname.startswith("_ALLEGRO_gl"):
-                    return
-                if kind == "typedef":
-                    types[sname] = line
-                else:
-                    structs[sname] = line
+                structs[sname] = line
 
 
 def parse_header(lines, filename):
@@ -86,22 +84,21 @@ def parse_header(lines, filename):
                 if ok:
                     name = line[8:]
                     match = re.match("#define ([a-zA-Z_]+)", line)
-                    name = match.group(1)
+                    name = match[1]
                     symbols[name] = "macro"
                     simple_constant = line.split()
 
-                    if len(simple_constant) == 3 and\
-                        not "(" in simple_constant[1] and\
-                        simple_constant[2][0].isdigit():
+                    if (
+                        len(simple_constant) == 3
+                        and "(" not in simple_constant[1]
+                        and simple_constant[2][0].isdigit()
+                    ):
                         constants[name] = simple_constant[2]
                     n += 1
-            elif line.startswith("#undef"):
-                pass
-            else:
+            elif not line.startswith("#undef"):
                 ok = False
-                match = re.match(r'# \d+ "(.*?)"', line)
-                if match:
-                    name = match.group(1)
+                if match := re.match(r'# \d+ "(.*?)"', line):
+                    name = match[1]
                     if name == "<stdin>" or name.startswith(options.build) or \
                             name.startswith("include") or \
                             name.startswith("addons") or\
@@ -122,12 +119,11 @@ def parse_header(lines, filename):
             brace += subline.count("{")
             brace += subline.count("(")
 
-            if cline:
-                if cline[-1].isalnum():
-                    cline += " "
+            if cline and cline[-1].isalnum():
+                cline += " "
             cline += subline
             if brace == 0 and subline.endswith(";") or subline.endswith("}"):
-                
+
                 lines2.append(cline.strip())
                 cline = ""
 
@@ -149,7 +145,7 @@ def parse_header(lines, filename):
                 symbols[name] = "typedef"
                 n += 1
             else:
-                print("? " + line)
+                print(f"? {line}")
 
             add_struct(line)
 
@@ -166,18 +162,17 @@ def parse_header(lines, filename):
                         match = re.match(r".*?(\w+)\s*;$", line)
                     if not match:
                         match = re.match(r".*?(\w+)", line)
-                    symbols[match.group(1)] = "variable"
-                    n += 1
+                    symbols[match[1]] = "variable"
                 else:
                     match = re.match(r".*?(\w+)\s*\(", line)
-                    fname = match.group(1)
+                    fname = match[1]
                     symbols[fname] = "function"
-                    if not fname in functions:
+                    if fname not in functions:
                         functions[fname] = line
-                    n += 1
+                n += 1
             except AttributeError as e:
-                print("Cannot parse in " + filename)
-                print("Line is: " + line)
+                print(f"Cannot parse in {filename}")
+                print(f"Line is: {line}")
                 print(e)
     return n
 
@@ -187,26 +182,30 @@ def parse_all_headers():
     Call parse_header() on all of Allegro's public include files.
     """
     p = options.source
-    includes = " -I " + p + "/include -I " + os.path.join(options.build,
-        "include")
-    includes += " -I " + p + "/addons/acodec"
-    headers = [p + "/include/allegro5/allegro.h",
-        p + "/addons/acodec/allegro5/allegro_acodec.h",
-        p + "/include/allegro5/allegro_opengl.h"]
+    includes = f" -I {p}/include -I " + os.path.join(options.build, "include")
+    includes += f" -I {p}/addons/acodec"
+    headers = [
+        f"{p}/include/allegro5/allegro.h",
+        f"{p}/addons/acodec/allegro5/allegro_acodec.h",
+        f"{p}/include/allegro5/allegro_opengl.h",
+    ]
     if options.windows:
-        headers += [p + "/include/allegro5/allegro_windows.h"]
+        headers += [f"{p}/include/allegro5/allegro_windows.h"]
 
-    for addon in glob.glob(p + "/addons/*"):
-        name = addon[len(p + "/addons/"):]
-        header = os.path.join(p, "addons", name, "allegro5",
-            "allegro_" + name + ".h")
+    for addon in glob.glob(f"{p}/addons/*"):
+        name = addon[len(f"{p}/addons/"):]
+        header = os.path.join(p, "addons", name, "allegro5", f"allegro_{name}.h")
         if os.path.exists(header):
             headers.append(header)
             includes += " -I " + os.path.join(p, "addons", name)
 
     for header in headers:
-        p = subprocess.Popen(options.compiler + " -E -dD - " + includes,
-            stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
+        p = subprocess.Popen(
+            f"{options.compiler} -E -dD - {includes}",
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            shell=True,
+        )
         filename = "#include <allegro5/allegro.h>\n" + open(header).read()
         p.stdin.write(filename.encode('utf-8'))
         p.stdin.close()
@@ -224,24 +223,23 @@ def check_undocumented_functions():
     parse_all_headers()
 
     for link in links:
-        if not link in symbols:
-            print("Missing: " + link)
+        if link not in symbols:
+            print(f"Missing: {link}")
 
     print("")
     print("Checking if each function is documented...")
     others = []
     for link in symbols:
-        if not link in links:
+        if link not in links:
             if symbols[link] == "function":
-                print("Missing: " + link)
-            else:
-                if link and not link.startswith("GL") and \
+                print(f"Missing: {link}")
+            elif link and not link.startswith("GL") and \
                         not link.startswith("gl") and \
                         not link.startswith("_al_gl") and \
                         not link.startswith("_ALLEGRO_gl") and \
                         not link.startswith("_ALLEGRO_GL") and \
                         not link.startswith("ALLEGRO_"):
-                    others.append(link)
+                others.append(link)
 
     print("Also leaking:")
     others.sort()
@@ -287,15 +285,15 @@ references in the documentation - then report symbols which are not documented.
         parse_all_headers()
         f = open(options.protos, "w")
         for name, s in structs.items():
-            f.write(name + ": " + s + "\n")
+            f.write(f"{name}: {s}" + "\n")
         for name, s in types.items():
-            f.write(name + ": " + s + "\n")
+            f.write(f"{name}: {s}" + "\n")
         for e in anonymous_enums.keys():
-            f.write(": " + e + "\n")
+            f.write(f": {e}" + "\n")
         for fname, proto in functions.items():
-            f.write(fname + "(): " + proto + "\n")
+            f.write(f"{fname}(): {proto}" + "\n")
         for name, value in constants.items():
-            f.write(name + ": #define " + name + " " + value + "\n")
+            f.write(f"{name}: #define {name} {value}" + "\n")
     elif options.list:
         list_all_symbols()
     else:

@@ -15,9 +15,8 @@ def read_color_h(filename):
         if line == "{": continue
         if line == "typedef enum ALLEGRO_PIXEL_FORMAT": inside_enum = True
         elif inside_enum:
-            match = re.match(r"\s*ALLEGRO_PIXEL_FORMAT_(\w+)", line)
-            if match:
-                formats.append(match.group(1))
+            if match := re.match(r"\s*ALLEGRO_PIXEL_FORMAT_(\w+)", line):
+                formats.append(match[1])
             else:
                 break
     return formats

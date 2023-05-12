@@ -64,48 +64,49 @@ class AI(Pallet):
 
     def handle_event(self, ev):
         #Only fire on a timer event
-        if ev.type == ALLEGRO_EVENT_TIMER:
-            #Calculate the target y location according to the difficulty level
-            if self.difficulty == 1:
-                target_y = self.ball.y + self.ball.size / 2
-            else:
-                # Higher difficulty, so we need to precalculate the position of
-                # the ball if it is closer than a certain treshold
-                dh = al_get_display_height(al_get_current_display())
-                if self.ball.xdir == -1 or abs(self.x - self.ball.x) >\
+        if ev.type != ALLEGRO_EVENT_TIMER:
+            return
+        #Calculate the target y location according to the difficulty level
+        if self.difficulty == 1:
+            target_y = self.ball.y + self.ball.size / 2
+        else:
+            # Higher difficulty, so we need to precalculate the position of
+            # the ball if it is closer than a certain treshold
+            dh = al_get_display_height(al_get_current_display())
+            if self.ball.xdir == -1 or abs(self.x - self.ball.x) >\
                         al_get_display_width(al_get_current_display()) * (
-                        self.difficulty - 1) / self.difficulty:
-                    # If the ball is moving away, return to the center of the
-                    # screen
-                    target_y = dh / 2
-                else:
-                    # The ball is moving towards this pallet within its FOV.
-                    # Calculate what the y location of the ball will be when it
-                    # lands at this pallets x location
-                    target_y = self.ball.y + (self.x - self.ball.x) *\
-                        self.ball.ydir
-                    if target_y < 0:
-                        target_y = abs(target_y)
-                    elif target_y > dh:
-                        target_y = dh - target_y % dh
-
-            #Set the movement
-            if target_y > self.y + self.h * 3 / 4:
-                self.moving = 1
-            elif target_y < self.y + self.h * 1 / 4:
-                self.moving = -1
+                    self.difficulty - 1) / self.difficulty:
+                # If the ball is moving away, return to the center of the
+                # screen
+                target_y = dh / 2
             else:
-                self.moving = 0
+                # The ball is moving towards this pallet within its FOV.
+                # Calculate what the y location of the ball will be when it
+                # lands at this pallets x location
+                target_y = self.ball.y + (self.x - self.ball.x) *\
+                        self.ball.ydir
+                if target_y < 0:
+                    target_y = abs(target_y)
+                elif target_y > dh:
+                    target_y = dh - target_y % dh
+
+        #Set the movement
+        if target_y > self.y + self.h * 3 / 4:
+            self.moving = 1
+        elif target_y < self.y + self.h * 1 / 4:
+            self.moving = -1
+        else:
+            self.moving = 0
 
 
 class Ball:
     def __init__(self, x, y, speed, size, pallets, color):
         self.x, self.y, self.speed, self.size, self.pallets, self.color =\
-            x, y, speed, size, pallets, color
+                x, y, speed, size, pallets, color
         self.xdir = randint(0, 1)
-        self.xdir = self.xdir - (self.xdir == 0)
+        self.xdir -= self.xdir == 0
         self.ydir = randint(0, 1)
-        self.ydir = self.ydir - (self.ydir == 0)
+        self.ydir -= self.ydir == 0
 
     def update(self):
         new_x = self.x + self.xdir * self.speed

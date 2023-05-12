@@ -72,16 +72,14 @@ class Allegro:
             if ptype in conversion:
                 return conversion[ptype]
             t = ptype[:-1]
-            if t in self.types:
-                return POINTER(self.types[t])
-            return c_void_p
+            return POINTER(self.types[t]) if t in self.types else c_void_p
         elif ptype in self.types:
             return self.types[ptype]
         else:
             try:
                 return conversion[ptype]
             except KeyError:
-                print("Type Error:" + str(ptype))
+                print(f"Type Error:{str(ptype)}")
         return None
 
     def parse_funcs(self, funcs):
@@ -148,8 +146,7 @@ class Allegro:
                     plist.append(c_void_p)
                     continue
 
-                mob = re.match("^.*?(\w+)$", param)
-                if mob:
+                if mob := re.match("^.*?(\w+)$", param):
                     pnamepos = mob.start(1)
                     if pnamepos == 0:
                         # Seems the parameter is not named
